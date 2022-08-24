@@ -1,0 +1,64 @@
+pip install yfinance
+
+import numpy as np
+import pandas as pd
+ #used to grab the stock prices, with yahoo
+import pandas_datareader as web
+from datetime import datetime
+ #to visualize the results
+import matplotlib.pyplot as plt
+import seaborn
+from pandas_datareader import data as pdr
+import yfinance as yf
+yf.pdr_override()
+#select start date for correlation window as well as list of tickers
+
+print('Enter date start date in: yy-mm-dd')
+start= '2019-01-01'
+today= datetime.today().strftime('%Y-%m-%d')
+symbols_list = ['NMDC.NS','RELIANCE.NS','HDFC.BO', 'HINDUNILVR.NS','GPIL.NS', 'GAIL.NS','HINDOILEXP.NS', 'NCC.NS', 'SJVN.NS', 'POLYPLEX.NS', 'CEATLTD.NS', 'ICICIGOLD.NS']
+#array to store prices
+symbols=[]
+
+#pull price using iex for each symbol in list defined above
+for ticker in symbols_list: 
+    r = pdr.get_data_yahoo(ticker, data_source='yahoo', start= start, end= today)
+    # add a symbol column
+    r['Symbol'] = ticker 
+    symbols.append(r)
+
+# concatenate into df
+df = pd.concat(symbols)
+df = df.reset_index()
+df = df[['Date', 'Close', 'Symbol']]
+df_pivot = df.pivot('Date','Symbol','Close').reset_index()
+
+
+df_pivot.head()
+dp = pd.DataFrame(df_pivot)
+corrM=dp.corr()
+
+import matplotlib.pyplot as plt
+fig = plt.gcf()
+
+# Change seaborn plot size
+fig.set_size_inches(20, 20)
+
+#take the bottom triangle since it repeats itself
+mask = np.zeros_like(corrM)
+mask[np.triu_indices_from(mask)] = 0
+ #generate plot
+seaborn.heatmap(corrM, cmap='RdYlGn', vmax=1.0, vmin=-1.0 , mask = mask,center=0, square=True, linewidths=1.5, cbar_kws={"shrink": .5}, annot=True)
+plt.yticks(rotation=0) 
+plt.xticks(rotation=90)
+plt.show()
+
+matrix = df_pivot.corr()
+corr_pairs = matrix.unstack()
+#matrix = matrix[matrix < 0.2]
+sorted_pairs = corr_pairs.sort_values(kind="quicksort")
+strong_pairs = sorted_pairs[(sorted_pairs) <= 0.1 ]
+
+
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    print(strong_pairs)
